@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Boards</h2>
+  <p class="muted">Online status and last seen come from the board's persistent TCP connection to <code>realtime</code> (SCRUM-151). Reload to refresh.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Last seen</th><th>Firmware</th><th></th></tr></thead>
+    <tbody>
+    {% for d in devices %}
+      <tr>
+        <td>#{{ d.pk }}</td>
+        <td>{{ d.name }}</td>
+        <td>{% if d.online %}<span class="pill ok">online</span>{% else %}<span class="pill">offline</span>{% endif %}
+            {% if d.wifi_powersave %}<span class="pill warn" title="Modem sleep adds up to ~300 ms latency">power save on</span>{% endif %}</td>
+        <td>{{ d.last_seen|default:"never" }}</td>
+        <td>{{ d.firmware|default:"-" }}</td>
+        <td>
+          <form method="post" action="{% url 'start_session' %}">{% csrf_token %}
+            <input type="hidden" name="device" value="{{ d.pk }}">
+            <button>Start session</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted">No boards. Run <code>python web/manage.py demo_setup</code>.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>Recent sessions</h2>
+  <p class="muted">"Stored" is what the TCP batches have written to TimescaleDB; gaps are seq ranges still missing (final once the session ends).</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Board</th><th>Status</th><th>Started</th><th>Stored</th><th>Gaps</th><th></th></tr></thead>
+    <tbody>
+    {% for s in sessions %}
+      <tr>
+        <td>{{ s.pk }}</td>
+        <td>{{ s.device.name }}</td>
+        <td><span class="pill {% if s.status == 'running' %}ok{% endif %}">{{ s.status }}</span></td>
+        <td>{{ s.started_at|time:"H:i:s" }}</td>
+        <td>{{ s.stats.samples }} samples</td>
+        <td>{% for g in s.live_gaps %}<div class="mono">seq {{ g.from }}–{{ g.to }} ({{ g.missing }})</div>{% empty %}<span class="muted">none</span>{% endfor %}</td>
+        <td class="actions">
+          <a href="{% url 'live' s.pk %}">Live view</a>
+          {% if s.status == 'running' %}
+          <form method="post" action="{% url 'stop_session' s.pk %}">{% csrf_token %}<button class="secondary">Stop</button></form>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="muted">No sessions yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

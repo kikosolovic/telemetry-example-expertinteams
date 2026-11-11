@@ -1,0 +1,28 @@
+# Dev database: TimescaleDB = Postgres + time-series extension (SCRUM-154/186).
+# It holds Django's tables, the telemetry hypertable, and carries LISTEN/NOTIFY.
+#
+# Production adds (same image for both app containers, spike Q2):
+#   web:      image: app, command: uvicorn telemetry_site.asgi:application
+#   realtime: image: app, command: python -m realtime, network_mode: host
+#             (host networking so aiortc advertises the VPS public IP and its
+#              random ICE UDP ports are reachable -- aioice can't pin a range)
+#   coturn:   TURN over TCP/TLS on 443 for networks that block UDP
+#   proxy:    nginx/Caddy: /rtc/offer -> realtime:8080, everything else -> web
+services:
+  db:
+    image: timescale/timescaledb:latest-pg17
+    environment:
+      POSTGRES_DB: telemetry
+      POSTGRES_USER: telemetry
+      POSTGRES_PASSWORD: telemetry
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telemetry -d telemetry"]
+      interval: 2s
+      retries: 30
+
+volumes:
+  pgdata:

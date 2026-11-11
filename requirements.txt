@@ -1,0 +1,4 @@
+Django>=6.1
+aiortc>=1.16        # 1.16 fixed SCTP partial-reliability bugs (unordered/no-retransmit channels)
+aiohttp>=3.10       # HTTP server for POST /rtc/offer inside `realtime`
+psycopg[binary,pool]>=3.2   # Django's Postgres driver + async pool + LISTEN/NOTIFY in `realtime`

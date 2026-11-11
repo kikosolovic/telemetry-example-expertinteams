@@ -1,0 +1,24 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Board telemetry{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'boards/style.css' %}">
+</head>
+<body>
+  <header class="top">
+    <a href="{% url 'dashboard' %}" class="brand">Board telemetry <span>demo</span></a>
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+        <span class="muted">{{ user.username }}</span> <button class="link">Log out</button>
+      </form>
+    {% endif %}
+  </header>
+  <main>
+    {% for m in messages %}<div class="banner {{ m.tags }}">{{ m }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

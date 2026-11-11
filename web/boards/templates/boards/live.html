@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Live – session {{ session.pk }}{% endblock %}
+{% block content %}
+<div class="live-head">
+  <h1>Session {{ session.pk }} <span class="muted">· {{ session.device.name }}</span></h1>
+  <div class="actions">
+    <span id="conn" class="pill">connecting…</span>
+    {% if session.status == 'running' and session.trainer_id == user.pk %}
+    <form method="post" action="{% url 'stop_session' session.pk %}">{% csrf_token %}<button class="secondary">Stop session</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- SCRUM-152/195: warning when latency > 500 ms or the live stream stops -->
+<div id="warning" class="banner error" hidden></div>
+
+<div class="live-grid">
+  <section class="card">
+    <h2>Centre of pressure</h2>
+    <canvas id="cop" width="360" height="360" aria-label="Centre of pressure on the board"></canvas>
+    <p class="muted small">Top view of the board, ±200 mm. The dot is where the weight is; the trail is the last second.</p>
+  </section>
+
+  <section class="card">
+    <h2>Stability</h2>
+    <div class="score"><span id="score">–</span><small>/100</small></div>
+    <canvas id="spark" width="360" height="80" aria-label="Score over the last 30 seconds"></canvas>
+    <dl class="kv">
+      <dt>Roll</dt><dd id="roll">–</dd>
+      <dt>Pitch</dt><dd id="pitch">–</dd>
+      <dt>CoP</dt><dd id="copxy">–</dd>
+      <dt>seq</dt><dd id="seq">–</dd>
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>Latency</h2>
+    <dl class="kv">
+      <dt>Board → server</dt><dd id="lat-bs">–</dd>
+      <dt>Server → screen</dt><dd id="lat-sc">–</dd>
+      <dt>Total</dt><dd id="lat-total">–</dd>
+      <dt>Clock offset</dt><dd id="lat-offset">–</dd>
+      <dt>Messages/s</dt><dd id="rate">–</dd>
+      <dt>Dropped (stale)</dt><dd id="stale">0</dd>
+    </dl>
+    <p class="muted small">Board → server is measured on every packet against the PING/PONG-corrected board clock. Server → screen is half the round trip of the <code>seq</code> echo the page sends once a second.</p>
+  </section>
+
+  <section class="card">
+    <h2>Stored record</h2>
+    <dl class="kv">
+      <dt>Samples in DB</dt><dd id="db-samples">–</dd>
+      <dt>Gaps</dt><dd id="db-gaps">–</dd>
+    </dl>
+    <p class="muted small">From TimescaleDB, polled from Django every 2 s. This is the TCP batch path, separate from the live UDP path above.</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Events channel</h2>
+  <pre id="log" class="log"></pre>
+</section>
+
+{{ ice_servers|json_script:"ice-servers" }}
+<script>
+  // Values the page needs from Django. Everything after this talks to `realtime` directly.
+  window.LIVE = {
+    sessionId: {{ session.pk }},
+    tokenUrl: "{% url 'rtc_token' session.pk %}",
+    statusUrl: "{% url 'session_status' session.pk %}",
+    offerUrl: "{{ realtime_url }}/rtc/offer",
+    iceServers: JSON.parse(document.getElementById("ice-servers").textContent),
+  };
+</script>
+{% endblock %}
+{% block scripts %}<script src="{% static 'boards/live.js' %}"></script>{% endblock %}

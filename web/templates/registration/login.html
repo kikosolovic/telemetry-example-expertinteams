@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Log in</h1>
+  <p class="muted">Demo account: <code>demo</code> / <code>demo</code> (run <code>manage.py demo_setup</code> first).</p>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button>Log in</button>
+  </form>
+</section>
+{% endblock %}
